@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  postgres:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: "admin"
+      POSTGRES_PASSWORD: "abc123"
+      POSTGRES_DB: "example"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+
+  # https://github.com/localstack/localstack/blob/master/docker-compose.yml
+  localstack:
+    image: localstack/localstack:1.0.0
+    ports:
+      - "0.0.0.0:4566:4566"            # LocalStack Gateway
+      - "0.0.0.0:4510-4559:4510-4559"  # external services port range
+    # https://docs.localstack.cloud/localstack/configuration/
+    environment:
+      - DEBUG=${DEBUG-}
+      - PERSISTENCE=${PERSISTENCE-}
+      - LAMBDA_EXECUTOR=${LAMBDA_EXECUTOR-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DEFAULT_REGION=ap-northeast-1
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+#
+# aws --endpoint-url=http://localhost:4566 s3api create-bucket --bucket my-bucket --region us-east-1
+#
+# aws --endpoint-url=http://localhost:4566 s3 ls
+#
