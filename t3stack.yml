@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: t3stack
+spec:
+  selector:
+    app: t3stack
+  ports:
+    - protocol: TCP
+      port: 9981
+      targetPort: 9981
+  type: LoadBalancer
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: t3stack
+  labels:
+    app: t3stack
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: t3stack
+  template:
+    metadata:
+      labels:
+        app: t3stack
+    spec:
+      containers:
+      - name: t3stack
+        image: registry.local:5000/t3stack:latest
+        ports:
+        - containerPort: 9981
+        env:
+        - {name: PORT, value: "9981"}
+        - {name: DATABASE_URL, value: postgresql://admin:abc123@%__MY_IPADDR__%:5432/example}
+        - {name: NEXTAUTH_URL,    value: http://%__MY_IPADDR__%:9981}
+        - {name: NEXTAUTH_SECRET, value: whatever}
+        - {name: AWS_ENDPOINT,          value: http://%__MY_IPADDR__%:4566}
+        - {name: AWS_REGION,            value: ap-northeast-1}
+        - {name: AWS_ACCESS_KEY_ID,     value: whatever}
+        - {name: AWS_SECRET_ACCESS_KEY, value: whatever}
+
