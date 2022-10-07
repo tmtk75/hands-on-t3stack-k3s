@@ -16,7 +16,7 @@ export default function Page(props: Props) {
 }
 
 export const getServerSideProps: GetServerSideProps = async () => {
-  const c = new S3Client({ endpoint: process.env.AWS_ENDPOINT });
+  const c = new S3Client({ endpoint: process.env.MY_AWS_ENDPOINT });
   const r = await c.send(new ListBucketsCommand({}));
   if (r.$metadata.httpStatusCode !== 200) {
     throw new Error(`failed to list-buckets.`);

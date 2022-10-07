@@ -39,7 +39,7 @@ spec:
         - {name: DATABASE_URL, value: postgresql://admin:abc123@%__MY_IPADDR__%:5432/example}
         - {name: NEXTAUTH_URL,    value: http://%__MY_IPADDR__%:9981}
         - {name: NEXTAUTH_SECRET, value: whatever}
-        - {name: AWS_ENDPOINT,          value: http://%__MY_IPADDR__%:4566}
+        - {name: MY_AWS_ENDPOINT,       value: http://%__MY_IPADDR__%:4566}
         - {name: AWS_REGION,            value: ap-northeast-1}
         - {name: AWS_ACCESS_KEY_ID,     value: whatever}
         - {name: AWS_SECRET_ACCESS_KEY, value: whatever}

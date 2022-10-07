@@ -207,7 +207,7 @@ example=# \d
 ```
 $ yarn add @aws-sdk/client-s3
 ...
-$ MY_AWS_ENDPOINT=http://localhost:4566 yarn dev
+$ MY_MY_AWS_ENDPOINT=http://localhost:4566 yarn dev
 ....
 ```
 Copy `/src/pages/aws.tsx`.
