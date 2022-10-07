@@ -1,45 +1,16 @@
-import { ListBucketsCommand, S3Client } from "@aws-sdk/client-s3";
-import type { GetServerSideProps } from "next";
-import { useEffect, useState } from "react";
+import { trpc } from "../utils/trpc";
+import { Bucket } from "./api/trpc/[trpc]";
 
-interface Bucket {
-  name?: string;
-  creationDate?: string;
-}
-
-interface Props {
-  buckets: Bucket[];
-}
-
-export default function Page(props: Props) {
-  return <S3BucketList {...props} />;
-}
-
-export const getServerSideProps: GetServerSideProps = async () => {
-  const c = new S3Client({ endpoint: process.env.AWS_ENDPOINT });
-  const r = await c.send(new ListBucketsCommand({}));
-  if (r.$metadata.httpStatusCode !== 200) {
-    throw new Error(`failed to list-buckets.`);
+export default function Page() {
+  const buckets = trpc.aws.listBuckets.useQuery({ limit: 3 });
+  if (!buckets.data) {
+    return <>Loading...</>;
   }
-  if (!r.Buckets) {
-    throw new Error(`unexpect Regions is missing.`);
-  }
+  return <S3BucketList buckets={buckets.data} />;
+}
 
-  const props: Props = {
-    buckets: r.Buckets.map((e) => ({
-      name: e.Name,
-      creationDate: e.CreationDate?.toISOString(),
-    })),
-  };
-  return {
-    props,
-  };
-};
-
-function S3BucketList({ buckets }: Props) {
-  const [values, setValues] = useState<Props["buckets"]>([]);
-  useEffect(() => setValues(buckets), [buckets]);
-  if (values.length === 0) {
+function S3BucketList({ buckets }: { buckets: Bucket[] }) {
+  if (buckets.length === 0) {
     return (
       <>
         <div>No s3 buckets.</div>
@@ -52,7 +23,7 @@ function S3BucketList({ buckets }: Props) {
   }
   return (
     <ul>
-      {values.slice(0, 5).map((r) => (
+      {buckets.map((r) => (
         <li key={r.name}>
           {r.name}: {r.creationDate}
         </li>
