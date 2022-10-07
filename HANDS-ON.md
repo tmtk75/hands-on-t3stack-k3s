@@ -1,10 +1,13 @@
 # Hands-on t3-stack + k3s
+This hands-on explains how to start developing t3-app and make it deployed on k3s cluster running on docker compose.
+
 * [k3s](https://github.com/k3s-io/k3s): Lightweight Kubernetes which can run on local docker.
 * [t3-stack](https://github.com/t3-oss/create-t3-app): Next.js, tRPC(router), Prisma(ORM), Tailwind(UI kit), NextAuth.js.
 
-This hands-on explains how to start developing t3-app and make it deployed on k3s cluster running on docker compose.
 
-Hands-on toc
+About 1 hour to finish.
+
+Hands-on toc:
 
 0. Scaffolding t3-stack app with yarn.
 1. Make a docker image for a t3-stack app.
@@ -16,20 +19,40 @@ Hands-on toc
 
 
 ## requirements
-* yarn (brew install yarn)
-* docker
+* yarn (brew install yarn) (v1.22.19) don't use v2
+* docker-desktop
 * aws (brew install awscli)
 * kubectl (brew install kubectl)
+* node v16 (v14 maybe ok)
+
+Put ~/.aws/config` if you are first time to use `awscli`.
+```
+% cat ~/.aws/config
+[default]
+region = whereever
+output = json
+```
+
+
+## Introduction
+This hands-on fully makes a new set of files in your HOME, `~/my-t3-app`, thought you will copy some files this repository.
+
+> Copy `/Dockerfile`.
+
+If you see "Copy", please copy the file from this repository.
 
 
 ## 0. Scaffolding a t3-stack app
 ```
+$ cd ~
 $ yarn create t3-app
--> name: hands-on-t3stack-on-k3s
+-> name: my-t3-app
 -> check all features. typescript, tRPC, ...
 ```
+
+Run with development server.
 ```
-$ cd hands-on-t3stack-on-k3s
+$ cd my-t3-app
 $ yarn dev
 ...
 # open http://localhost:3000
@@ -42,12 +65,13 @@ $ yarn start
 ...
 # open http://localhost:3000
 ```
+You are ready to develop a next.js app.
 
 
 ## 1. Make a docker image for the app
 Copy `/Dockerfile`.
 
-Patch `next.config.mjs`.
+Patch `/next.config.mjs` like this.
 ```diff
 $ git diff
 diff --git a/next.config.mjs b/next.config.mjs
@@ -72,20 +96,28 @@ $ docker run -p 3000:3000 t3stack
 
 ## 2. Push the image to a local registry
 Local registry to be available.
+
+Add `insecure-registries` to your docker-desktop.
+
 `Preferences` -> `Docker engine`.
 ```
   "insecure-registries": [
     "registry.local:5000"
   ]
 ```
+
+Edit your `/etc/hosts` to add an entry.
 ```
+$ sudo vim /etc/hosts
+...
+
 $ cat /etc/hosts
 ...
 127.0.0.1 registry.local
 ```
 
 Copy `/docker-compose.registry.yml`.
-You may need to disable AirPlay receiver[^1] if you use recent macOS.
+You may need to disable AirPlay receiver[^1] if you use recent macOS and see :5000 port conflict.
 ```
 $ docker compose -f ./docker-compose.registry.yml up -d
 ...
@@ -137,10 +169,10 @@ index 21876bc..c52e0ac 100644
      // Further reading:
      // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
 ```
-`db push`.
+
+Run `db push` with a connection URL.
 ```
 $ DATABASE_URL=postgresql://admin:abc123@localhost:5432/example yarn prisma db push
-$ /path/to/hands-on-t3stack-on-k3s/node_modules/.bin/prisma db push
 Environment variables loaded from .env
 Prisma schema loaded from prisma/schema.prisma
 Datasource "db": PostgreSQL database "example", schema "public" at "localhost:5432"
@@ -151,6 +183,8 @@ Datasource "db": PostgreSQL database "example", schema "public" at "localhost:54
 
 ✨  Done in 2.22s.
 ```
+
+Check the schemas are created.
 ```
 $ docker run --rm -it --net=host -e PGPASSWORD=abc123 postgres:14-alpine psql -h localhost -U admin example
 psql (14.5)
@@ -173,13 +207,14 @@ example=# \d
 ```
 $ yarn add @aws-sdk/client-s3
 ...
-$ AWS_ENDPOINT=http://localhost:4566 yarn dev
+$ MY_AWS_ENDPOINT=http://localhost:4566 yarn dev
 ....
 ```
 Copy `/src/pages/aws.tsx`.
 open http://localhost:3000/aws
 
-You'll see "No s3 buckets".
+You'll see a message, "No s3 buckets".
+
 Type the command in the page to create a new bucket locally.
 Then you will see the bucket when you reload the browser.
 
@@ -189,6 +224,9 @@ Make a `k3s.env` and source it.
 ```
 export KUBECONFIG=./kubeconfig.yaml
 export K3S_TOKEN=abc123
+```
+```
+$ source ./k3s.env
 ```
 
 Copy `/docker-compose.k3s.yml`.
@@ -222,6 +260,7 @@ kube-system   traefik-df4ff85d6-cdbcl                   1/1     Running     0   
 
 
 ## 6. Deploy the app onto the cluster
+Ensure the image just in case.
 ```
 $ curl -X GET http://registry.local:5000/v2/_catalog
 {"repositories":["t3stack"]}
@@ -242,7 +281,7 @@ t3stack-59fb8b9684-d9kh8   1/1     Running   0          74m
 ```
 Open http://localhost:9981/ if it's ready (`1/1`).
 
-You'lil see "Internal Server Error".
+You'll see "Internal Server Error".
 Let's identify the reason by seeing the logs.
 
 ```
@@ -319,3 +358,14 @@ deployment.apps/t3stack restarted
 
 Then you can see the `/aws` page.
 
+
+## Clean up
+````
+$ docker compose -f docker-compose.pg-localstack.yml -f docker-compose.registry.yml -f docker-compose.k3s.yml stop
+$ docker compose -f docker-compose.pg-localstack.yml -f docker-compose.registry.yml -f docker-compose.k3s.yml rm
+? Going to remove ... (y/N) y
+
+$ docker volume prune
+...
+Are you sure you want to continue? [y/N] y
+```
